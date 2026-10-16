@@ -13,7 +13,7 @@ Receiver browser <── streamed HTTP GET ── Host .blob file
 
 1. `POST /api/join` exchanges a room code and device name for an expiring HttpOnly, SameSite=Strict cookie.
 2. `POST /api/files` reserves quota and creates a random-ID `.part` file and atomic JSON metadata.
-3. `PATCH /api/files/{id}` appends a bounded binary chunk with an exact `Upload-Offset` and `Content-Length`. A per-file mutex serializes writes. A short request truncates back to the previous offset. An offset conflict returns 409; clients query the current offset before retrying.
+3. `PATCH /api/files/{id}` appends a bounded binary chunk with an exact `Upload-Offset` and `Content-Length`. A per-file write mutex serializes body mutations. A separate short metadata lock keeps library reads responsive during slow uploads. A short request truncates back to the previous offset. An offset conflict returns 409; clients query the current offset before retrying.
 4. `GET /api/files/{id}` returns the acknowledged offset. A lost chunk response is reconciled here rather than blindly sending the same bytes twice.
 5. `POST /api/files/{id}/complete` requires offset = declared size. The host syncs and renames the body to `.blob` before publishing it. Completion is idempotent. The host recognizes completed bodies after a restart even if its metadata update was interrupted.
 6. `GET /api/files/{id}/download` returns a forced attachment using `http.ServeContent`. HEAD and byte ranges are supported. Incomplete bodies cannot be downloaded.

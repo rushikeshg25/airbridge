@@ -16,14 +16,22 @@ import (
 	"airbridge/internal/server"
 )
 
+var version = "dev"
+var commit = "unknown"
+
 func main() {
 	cfg := server.Config{}
+	showVersion := flag.Bool("version", false, "print version and exit")
 	flag.StringVar(&cfg.Address, "listen", ":8080", "HTTP listening address")
 	flag.StringVar(&cfg.Directory, "data", "./data", "directory for received files")
 	flag.StringVar(&cfg.Name, "name", "My Airbridge", "room name")
 	flag.Int64Var(&cfg.MaxFile, "max-file", 50<<30, "maximum bytes per file")
 	flag.Int64Var(&cfg.Quota, "quota", 100<<30, "maximum reserved bytes in the room")
 	flag.Parse()
+	if *showVersion {
+		fmt.Printf("Airbridge %s (%s)\n", version, commit)
+		return
+	}
 	if cfg.MaxFile <= 0 || cfg.Quota < cfg.MaxFile {
 		log.Fatal("quota must be at least max-file; both must be positive")
 	}

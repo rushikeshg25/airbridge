@@ -8,7 +8,11 @@ One Mac or Linux computer hosts the room. Devices join using its local address a
 
 ## Start sharing
 
-Install Go 1.23 or later, then run from this repository:
+Download the archive for your host from [GitHub Releases](https://github.com/rushikeshg25/transfer/releases/latest). Choose `macos-arm64` for Apple Silicon, `macos-amd64` for Intel Macs, or the matching Linux architecture. Extract it and run `./airbridge`. Phones and other clients need only a browser.
+
+Verify the download against the release’s `SHA256SUMS` using `sha256sum` on Linux or `shasum -a 256` on macOS. macOS binaries are unsigned and not notarized; you can build from source if your system blocks an unrecognized application.
+
+To build from source, install Go 1.23 or later, then run from this repository:
 
 ```sh
 make run
@@ -75,7 +79,7 @@ The runtime uses only Go’s standard library and native browser APIs. UI files 
 ```sh
 make check                         # race tests, go vet, JavaScript syntax
 make build                         # current host binary
-make release                       # Linux/macOS, x64/ARM64 binaries in bin/
+make package VERSION=1.0.0          # four platform archives + SHA256SUMS in bin/releases/
 python3 scripts/benchmark.py --mib 1024  # disposable loopback test + SHA-256
 ```
 
@@ -92,3 +96,9 @@ CHROME_PATH=/usr/bin/google-chrome make browser-test
 The browser test starts its own host on a temporary port, uses a temporary data directory, checks independent sending/receiving sessions, and cleans up afterward. Screenshots go to `test-results/`. The benchmark also uses a disposable room. Neither test touches your normal `data/` directory.
 
 See [architecture and protocol](docs/architecture.md) and [verification results](docs/verification.md).
+
+## Publishing a release
+
+Run `make check`, the browser smoke test, and `make package VERSION=X.Y.Z` from the release commit. Confirm `./bin/airbridge-linux-amd64 -version` on an x64 Linux build host and verify the archives with `sha256sum -c SHA256SUMS` from `bin/releases/`. Tag the verified commit `vX.Y.Z`, push that tag, and upload exactly the four matching archives and checksum file to its GitHub Release. Do not replace assets or move an existing release tag; use a new version for fixes.
+
+CI runs Go race tests on Linux and macOS, plus the Chromium transfer tests and package checks on Linux. Build tools and browser test dependencies are not needed by release users.

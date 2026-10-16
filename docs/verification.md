@@ -55,4 +55,8 @@ Phone-sized receiving library:
 
 ## Local repository handoff
 
-The repository contains 20 chronological local commits, covering the host, disk protocol, browser UI, regression tests, tooling, and verification record. No remote was added and nothing was pushed. Build outputs and temporary test artifacts are ignored. The development decision log is retained locally under `logs/` and is intentionally not committed.
+The initial implementation was delivered as 20 chronological local commits. The GitHub release follow-up adds review fixes and release tooling without rewriting that history. Build outputs and temporary test artifacts are ignored. The development decision log is retained locally under `logs/` and is intentionally not committed.
+
+## Release review follow-up
+
+Three defects were reproduced before fixing them: room-list blocking during a stalled chunk body, missed recovery in a data directory named `room[1]`, and a late fingerprint response enqueuing a selected batch after logout. Targeted regressions now cover each case. Browser work is scoped to its originating room and session generation, so stale requests cannot update a new room session. See the GitHub Actions run on the release commit for current hosted CI results.
