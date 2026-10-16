@@ -8,7 +8,7 @@ One Mac or Linux computer hosts the room. Devices join using its local address a
 
 ## Start sharing
 
-Download the archive for your host from [GitHub Releases](https://github.com/rushikeshg25/transfer/releases/latest). Choose `macos-arm64` for Apple Silicon, `macos-amd64` for Intel Macs, or the matching Linux architecture. Extract it and run `./airbridge`. Phones and other clients need only a browser.
+Download the archive for your host from [GitHub Releases](https://github.com/rushikeshg25/airbridge/releases/latest). Choose `macos-arm64` for Apple Silicon, `macos-amd64` for Intel Macs, or the matching Linux architecture. Extract it and run `./airbridge`. Phones and other clients need only a browser.
 
 Verify the download against the release’s `SHA256SUMS` using `sha256sum` on Linux or `shasum -a 256` on macOS. macOS binaries are unsigned and not notarized; you can build from source if your system blocks an unrecognized application.
 
