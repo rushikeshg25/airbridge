@@ -1,1 +1,71 @@
-<!doctype html><html lang="en"><meta charset="utf-8"><title>Airbridge</title><h1>Airbridge</h1><p>Your local file bridge.</p></html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#006d77">
+  <meta name="description" content="Move large files between devices on your local network. No cloud, no account.">
+  <title>Airbridge — Local file sharing</title>
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/style.css">
+  <script type="module" src="/app.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <a class="brand" href="/" aria-label="Airbridge home"><img src="/icon.svg" width="38" height="38" alt=""><span>airbridge<span class="brand-caption">A little closer. A lot faster.</span></span></a>
+      <nav aria-label="Main navigation">
+        <button class="nav-item active" data-view="send" aria-current="page"><span aria-hidden="true">↗</span> Send files</button>
+        <button class="nav-item" data-view="library"><span aria-hidden="true">▤</span> Room files <span id="file-count" class="count">0</span></button>
+        <button class="nav-item" data-view="help"><span aria-hidden="true">ⓘ</span> How it works</button>
+      </nav>
+      <div class="sidebar-bottom"><span class="local-dot"></span> Your network. Your files.<p>Made for the devices<br>already around you.</p><span class="version">Airbridge / 1.0</span></div>
+    </aside>
+    <div class="workspace">
+      <header class="topbar"><div class="breadcrumb">Your workspace <span>/</span> <strong id="page-label">Send files</strong></div><div class="connection" id="connection"><span class="local-dot"></span><span id="connection-label">Not connected</span></div><button class="device-pill" id="leave-button" title="Leave this room" hidden><span id="device-name">This device</span><span aria-hidden="true">↪</span></button></header>
+      <main id="main" tabindex="-1">
+        <div id="offline-banner" class="notice" role="status" hidden>Host is unreachable. Keep the host awake and reconnect to the same network.</div>
+        <section id="view-send" class="view">
+          <div class="page-heading"><div><p class="eyebrow">Less waiting, more sharing</p><h1>From here to there.</h1><p class="intro">Big files. Small distance. Send something across the room.</p></div><span class="network-tag"><span class="local-dot"></span> Local network</span></div>
+          <div class="send-layout">
+            <div>
+              <div class="dropzone" id="dropzone">
+                <div class="transfer-mark" aria-hidden="true"><span class="mark-file">▤</span><span class="mark-arrow">↗</span></div>
+                <h2>Drop it like it’s local.</h2><p>Drag files here, or choose them from your device.</p>
+                <button id="choose-button" class="primary"><span aria-hidden="true">＋</span> Choose files</button>
+                <input id="file-input" type="file" multiple hidden>
+                <p class="drop-note" id="file-limit">Any file type · Resumable uploads</p>
+              </div>
+              <div class="section-heading"><h2>Your transfers <span class="count" id="queue-count">0</span></h2><button id="clear-complete" class="text-button" hidden>Clear finished</button></div>
+              <div id="transfer-list" class="transfer-list" aria-label="Upload queue"></div>
+              <div id="queue-empty" class="empty-inline"><span aria-hidden="true">↗</span><div><strong>A clear runway.</strong><p>Your transfer progress will appear here.</p></div></div>
+            </div>
+            <aside class="room-panel" aria-label="Room connection">
+              <div class="room-card"><div class="room-symbol" aria-hidden="true">⌁</div><h2 id="room-name">Your local room</h2><p>One link brings your devices together.</p><label for="room-url">Open on another device</label><div class="copy-field"><input id="room-url" readonly value="Connect to see your address" aria-label="Room address"><button id="copy-link" aria-label="Copy room address" title="Copy address">⧉</button></div><p class="small">Use the room code shown in the host terminal to join.</p><button id="details-button" class="text-button">Connection details <span aria-hidden="true">↗</span></button><div id="connection-details" hidden></div></div>
+              <div class="local-note"><span aria-hidden="true">◎</span><div><strong>A short trip for your files.</strong><p>Files travel through this host on your network. Nothing is sent to a cloud service.</p></div></div>
+              <div class="storage"><div><span>Room storage</span><strong id="storage-label">—</strong></div><progress id="storage-progress" value="0" max="100" aria-label="Room storage used"></progress><p>Remove shared files when you’re done to make space.</p></div>
+            </aside>
+          </div>
+        </section>
+        <section id="view-library" class="view" hidden>
+          <div class="page-heading"><div><p class="eyebrow">Ready for the next device</p><h1>Room files.</h1><p class="intro">Files shared by everyone in this room, ready to download.</p></div><button id="refresh-library" class="secondary">Refresh files</button></div>
+          <div class="library-toolbar"><label class="search-field"><span aria-hidden="true">⌕</span><input id="file-search" type="search" placeholder="Find a file…" aria-label="Search room files"></label><span id="library-summary" class="small">0 files</span></div>
+          <div id="library-list" class="library-list"></div><div id="library-empty" class="empty-large"><div aria-hidden="true">▤</div><h2>Make room for something good.</h2><p>Send a file from any connected device. It will appear here.</p><button class="secondary" data-view="send">Send your first file</button></div>
+        </section>
+        <section id="view-help" class="view" hidden>
+          <div class="page-heading"><div><p class="eyebrow">A bridge, without the distance</p><h1>Three steps. All local.</h1><p class="intro">Your host computer keeps the room open and stores shared files.</p></div></div>
+          <div class="help-steps"><article><span>1</span><h2>Get on the same network</h2><p>Connect your devices to the same Wi-Fi or Ethernet network. Keep the host running and awake.</p></article><article><span>2</span><h2>Open the room</h2><p>Open the host’s local IP address in your browser. Enter the room code from the host terminal.</p></article><article><span>3</span><h2>Send, then download</h2><p>Choose your files. When an upload finishes, open Room files on the receiving device and download it.</p></article></div>
+          <div class="help-notes"><h2>A few things to know</h2><p><strong>Large files:</strong> keep your browser open while uploading. You can pause and resume. After a reload, select the same file to continue a saved upload.</p><p><strong>Fast transfers:</strong> use Ethernet for the host or a strong 5/6 GHz Wi-Fi connection. The host stores a full copy before another device can download it.</p><p><strong>Trusted networks:</strong> the default local connection uses HTTP. The room code controls access but does not encrypt traffic. Everyone in the room can download or remove shared files.</p><p><strong>Can’t connect?</strong> Check the host firewall and disable guest Wi-Fi client isolation. A phone’s mobile data connection cannot reach your private LAN address.</p></div>
+        </section>
+        <footer><span>Across your network. Out of the cloud.</span><span>Keep your host awake while sharing <span aria-hidden="true">↗</span></span></footer>
+      </main>
+    </div>
+  </div>
+  <dialog id="join-dialog" aria-labelledby="join-title">
+    <form id="join-form"><img src="/icon.svg" width="48" height="48" alt=""><p class="eyebrow">Welcome to Airbridge</p><h2 id="join-title">Your files have<br>places to be.</h2><p>Enter the room code from the host terminal.<br>Stay on the same network to connect.</p><label for="join-name">Device name</label><input id="join-name" name="name" maxlength="60" placeholder="e.g. Sam’s phone" autocomplete="off" required><label for="join-pin">Room code</label><input id="join-pin" name="pin" type="password" minlength="6" maxlength="128" placeholder="Enter room code" autocomplete="off" required><p id="join-error" class="error-text" role="alert"></p><button id="join-submit" class="primary" type="submit">Join the room <span aria-hidden="true">↗</span></button><p class="join-footnote">No account. No cloud. Just your network.</p></form>
+  </dialog>
+  <div id="toast" class="toast" role="status" hidden></div>
+  <noscript><div class="noscript">Enable JavaScript to join the room and transfer files.</div></noscript>
+</body>
+</html>
