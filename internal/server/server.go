@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"airbridge/internal/store"
 	"airbridge/internal/web"
 )
 
@@ -25,6 +26,7 @@ type attempt struct {
 	Until time.Time
 }
 type Server struct {
+	files    *store.Store
 	cfg      Config
 	mu       sync.Mutex
 	sessions map[string]session
@@ -32,7 +34,11 @@ type Server struct {
 }
 
 func New(cfg Config) (*Server, error) {
-	return &Server{cfg: cfg, sessions: make(map[string]session), attempts: make(map[string]attempt)}, nil
+	files, err := store.Open(cfg.Directory, cfg.MaxFile, cfg.Quota)
+	if err != nil {
+		return nil, err
+	}
+	return &Server{files: files, cfg: cfg, sessions: make(map[string]session), attempts: make(map[string]attempt)}, nil
 }
 
 func (s *Server) Handler() http.Handler {
@@ -40,6 +46,9 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /api/join", s.join)
 	mux.HandleFunc("POST /api/leave", s.require(s.leave))
 	mux.HandleFunc("GET /api/room", s.require(s.room))
+	mux.HandleFunc("GET /api/files", s.require(s.listFiles))
+	mux.HandleFunc("POST /api/files", s.require(s.createFile))
+	mux.HandleFunc("GET /api/files/{id}", s.require(s.getFile))
 	mux.Handle("/", web.Handler())
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("X-Content-Type-Options", "nosniff")
