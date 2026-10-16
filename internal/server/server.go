@@ -53,6 +53,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /api/files/{id}/complete", s.require(s.finishUpload))
 	mux.HandleFunc("GET /api/files/{id}/download", s.require(s.download))
 	mux.HandleFunc("DELETE /api/files/{id}", s.require(s.deleteFile))
+	mux.HandleFunc("POST /api/fingerprint", s.require(s.fingerprint))
 	mux.Handle("/", web.Handler())
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("X-Content-Type-Options", "nosniff")

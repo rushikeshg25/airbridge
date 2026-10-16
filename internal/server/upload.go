@@ -2,6 +2,9 @@ package server
 
 import (
 	"airbridge/internal/store"
+	"crypto/sha256"
+	"encoding/hex"
+	"io"
 	"net/http"
 	"strconv"
 	"time"
@@ -32,4 +35,16 @@ func (s *Server) finishUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	reply(w, 200, f)
+}
+
+// Fingerprint uses bounded samples for accidental-file-mismatch protection.
+// This is an identity hint for resume, not a checksum of the entire file.
+func (s *Server) fingerprint(w http.ResponseWriter, r *http.Request) {
+	body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, 128<<10))
+	if err != nil {
+		fail(w, 400, "Fingerprint sample is too large")
+		return
+	}
+	hash := sha256.Sum256(body)
+	reply(w, 200, map[string]string{"hash": hex.EncodeToString(hash[:])})
 }
