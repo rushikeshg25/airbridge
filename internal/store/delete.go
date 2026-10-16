@@ -2,19 +2,21 @@ package store
 
 import (
 	"os"
-	"path/filepath"
 	"strings"
 )
 
 func (s *Store) Delete(id string) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	e := s.files[id]
-	if e == nil {
-		return ErrNotFound
+	e, err := s.lookup(id)
+	if err != nil {
+		return err
 	}
+	e.writeMu.Lock()
+	defer e.writeMu.Unlock()
 	e.mu.Lock()
 	defer e.mu.Unlock()
+	if e.deleted {
+		return ErrNotFound
+	}
 	// The tombstone records user intent if the process stops during removal.
 	if err := os.Rename(s.path(id, ".json"), s.path(id, ".deleted")); err != nil {
 		return err
@@ -28,18 +30,23 @@ func (s *Store) Delete(id string) error {
 		return err
 	}
 	e.deleted = true
+	s.mu.Lock()
 	delete(s.files, id)
 	s.used -= e.Size
+	s.mu.Unlock()
 	return os.Remove(s.path(id, ".deleted"))
 }
 
 func (s *Store) recoverDeletes() error {
-	paths, err := filepath.Glob(filepath.Join(s.dir, "*.deleted"))
+	entries, err := os.ReadDir(s.dir)
 	if err != nil {
 		return err
 	}
-	for _, path := range paths {
-		id := strings.TrimSuffix(filepath.Base(path), ".deleted")
+	for _, entry := range entries {
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".deleted") {
+			continue
+		}
+		id := strings.TrimSuffix(entry.Name(), ".deleted")
 		if !validID(id) {
 			continue
 		}

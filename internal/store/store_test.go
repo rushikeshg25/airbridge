@@ -4,7 +4,10 @@ import (
 	"bytes"
 	"errors"
 	"io"
+	"path/filepath"
+	"sync"
 	"testing"
+	"time"
 )
 
 func TestResumePublishAndDownload(t *testing.T) {
@@ -130,5 +133,76 @@ func TestZeroByteAndConcurrentOffset(t *testing.T) {
 	}
 	if wins != 1 {
 		t.Fatalf("expected one writer, got %d", wins)
+	}
+}
+
+// A slow body must not prevent the room from listing files or accepting new ones.
+func TestLibraryRemainsResponsiveDuringUpload(t *testing.T) {
+	s, err := Open(t.TempDir(), 100, 200)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+	f, _ := s.Create("slow", 4, "phone")
+	reader, writer := io.Pipe()
+	started := make(chan struct{})
+	uploaded := make(chan error, 1)
+	go func() {
+		_, err := s.Append(f.ID, 0, 4, &signalReader{Reader: reader, started: started})
+		uploaded <- err
+	}()
+	<-started
+	listed := make(chan struct{})
+	go func() { s.List(); close(listed) }()
+	responsive := true
+	select {
+	case <-listed:
+	case <-time.After(150 * time.Millisecond):
+		responsive = false
+	}
+	// Always release the stalled upload, including when testing the broken version.
+	_, _ = writer.Write([]byte("data"))
+	_ = writer.Close()
+	if err := <-uploaded; err != nil {
+		t.Fatal(err)
+	}
+	<-listed
+	if !responsive {
+		t.Fatal("room library blocked behind a slow upload body")
+	}
+}
+
+type signalReader struct {
+	io.Reader
+	started chan struct{}
+	once    sync.Once
+}
+
+func (r *signalReader) Read(p []byte) (int, error) {
+	r.once.Do(func() { close(r.started) })
+	return r.Reader.Read(p)
+}
+
+func TestRecoveryWithLiteralDirectoryName(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), "room[1]")
+	s, err := Open(dir, 100, 200)
+	if err != nil {
+		t.Fatal(err)
+	}
+	f, err := s.Create("saved", 0, "device")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = s.Finish(f.ID); err != nil {
+		t.Fatal(err)
+	}
+	s.Close()
+	s, err = Open(dir, 100, 200)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+	if _, err = s.Get(f.ID); err != nil {
+		t.Fatal("saved file disappeared after restart in a path containing brackets", err)
 	}
 }

@@ -63,8 +63,10 @@ function render() {
 export async function refresh() {
   if (pending || !state.room) return;
   pending = true;
+  const room = state.room;
   try {
     const result = await api('/api/files');
+    if (state.room !== room) return;
     files = result.files;
     $('storage-label').textContent = `${bytes(result.used)} / ${bytes(result.quota)}`;
     $('storage-progress').value = result.quota ? result.used / result.quota * 100 : 0;
@@ -74,7 +76,7 @@ export async function refresh() {
     $('connection-label').textContent = 'Connected to room';
     render();
   } catch (error) {
-    if (error.status !== 401) {
+    if (error.status !== 401 && state.room === room) {
       state.online = false;
       $('connection').classList.add('offline');
       $('offline-banner').hidden = false;

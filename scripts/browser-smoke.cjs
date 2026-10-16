@@ -120,8 +120,24 @@ async function main() {
     await receiver.unroute('**/api/files');
     await receiver.locator('#refresh-library').click();
     await receiver.locator('#offline-banner').waitFor({ state: 'hidden' });
+    // Hold fingerprinting while the user leaves. Neither the completed sample
+    // nor the remaining selected files may enqueue work in the ended session.
+    let sampled, releaseSample;
+    const sampleReached = new Promise((resolve) => { sampled = resolve; });
+    const sampleReleased = new Promise((resolve) => { releaseSample = resolve; });
+    await receiver.route('**/api/fingerprint', async (route) => {
+      const response = await route.fetch(); sampled(); await sampleReleased;
+      await route.fulfill({ response });
+    });
+    await receiver.locator('.nav-item[data-view="send"]').click();
+    await receiver.locator('#file-input').setInputFiles([smallPath, emptyPath]);
+    await sampleReached;
     await receiver.locator('#leave-button').click();
     await receiver.locator('#join-dialog').waitFor({ state: 'visible' });
+    releaseSample();
+    await receiver.waitForResponse('**/api/fingerprint');
+    await receiver.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    assert.equal(await receiver.locator('.transfer-row').count(), 0, 'Late sample enqueued files after logout');
     assert.equal(await receiver.evaluate(async () => (await fetch('/api/files')).status), 401);
     assert.deepEqual(errors, []);
     console.log('PASS: two browser sessions, 320/390/768/1440px layouts, pause, host restart, reselect-resume, 17 MiB SHA-256 round trip, empty/Unicode/HTML-like files, search, deletion, offline recovery, logout.');

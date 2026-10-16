@@ -152,9 +152,11 @@ function pump() {
   }
 }
 async function enqueue(files) {
-  if (!state.room) { toast('Join the room first.'); return; }
+  const room = state.room;
+  if (!room) { toast('Join the room first.'); return; }
   for (const file of files) {
-    if (file.size > state.room.maxFile) { toast(`${file.name} exceeds the ${bytes(state.room.maxFile)} file limit.`); continue; }
+    if (state.room !== room) return;
+    if (file.size > room.maxFile) { toast(`${file.name} exceeds the ${bytes(room.maxFile)} file limit.`); continue; }
     // Hash only two 64 KiB samples on the host. This works on HTTP LAN
     // origins where browser WebCrypto is unavailable and avoids a full-file scan.
     let identity;
@@ -162,6 +164,7 @@ async function enqueue(files) {
       const sample = new Blob([file.slice(0, 65536), file.slice(Math.max(0, file.size - 65536))]);
       identity = await api('/api/fingerprint', { method: 'POST', body: sample, headers: { 'Content-Type': 'application/octet-stream' } });
     } catch (error) { toast(error.message); continue; }
+    if (state.room !== room) return;
     const key = JSON.stringify([file.name, file.size, file.lastModified, identity.hash]);
     if (queue.some((item) => item.key === key && item.status !== 'done')) { toast(`${file.name} is already in your queue.`); continue; }
     const item = { file, key, id: saved[key] || null, status: 'queued', visible: 0, speed: 0, paused: false };

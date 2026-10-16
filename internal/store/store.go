@@ -34,7 +34,8 @@ type File struct {
 	Sender   string    `json:"sender"`
 }
 type entry struct {
-	mu sync.Mutex
+	mu      sync.Mutex // protects the published metadata snapshot
+	writeMu sync.Mutex // serializes body mutations without blocking metadata readers
 	File
 	deleted bool
 }
@@ -67,11 +68,15 @@ func Open(dir string, max, quota int64) (*Store, error) {
 	if err := s.recoverDeletes(); err != nil {
 		return nil, err
 	}
-	paths, err := filepath.Glob(filepath.Join(dir, "*.json"))
+	entries, err := os.ReadDir(dir)
 	if err != nil {
 		return nil, err
 	}
-	for _, path := range paths {
+	for _, diskEntry := range entries {
+		if diskEntry.IsDir() || !strings.HasSuffix(diskEntry.Name(), ".json") {
+			continue
+		}
+		path := filepath.Join(dir, diskEntry.Name())
 		data, err := os.ReadFile(path)
 		if err != nil {
 			return nil, err
@@ -189,15 +194,22 @@ func (s *Store) Get(id string) (File, error) {
 }
 func (s *Store) List() ([]File, int64) {
 	s.mu.RLock()
-	defer s.mu.RUnlock()
-	files := make([]File, 0, len(s.files))
+	entries := make([]*entry, 0, len(s.files))
 	for _, e := range s.files {
+		entries = append(entries, e)
+	}
+	used := s.used
+	s.mu.RUnlock()
+	files := make([]File, 0, len(entries))
+	for _, e := range entries {
 		e.mu.Lock()
-		files = append(files, e.File)
+		if !e.deleted {
+			files = append(files, e.File)
+		}
 		e.mu.Unlock()
 	}
 	sort.Slice(files, func(i, j int) bool { return files[i].Created.After(files[j].Created) })
-	return files, s.used
+	return files, used
 }
 
 func (s *Store) Close() error { return s.lock.Close() }

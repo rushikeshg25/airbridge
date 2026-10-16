@@ -1,6 +1,6 @@
 export const $ = (id) => document.getElementById(id);
 export const events = new EventTarget();
-export const state = { room: null, online: true };
+export const state = { room: null, online: true, generation: 0 };
 export function bytes(value) {
   if (!Number.isFinite(value) || value <= 0) return '0 B';
   const units = ['B', 'KiB', 'MiB', 'GiB', 'TiB'];
@@ -21,14 +21,16 @@ export function toast(message) {
   toastTimer = setTimeout(() => { $('toast').hidden = true; }, 4500);
 }
 export function showJoin(message = '') {
-  events.dispatchEvent(new Event('leaving'));
+  state.generation++;
   state.room = null;
+  events.dispatchEvent(new Event('leaving'));
   $('join-error').textContent = message;
   $('connection-label').textContent = 'Not connected';
   $('leave-button').hidden = true;
   if (!$('join-dialog').open) $('join-dialog').showModal();
 }
 export async function api(path, options = {}) {
+  const generation = state.generation;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), path.endsWith('/complete') ? 120000 : 30000);
   let response, body;
@@ -45,7 +47,7 @@ export async function api(path, options = {}) {
       : 'Cannot reach the host. Check your network and retry.');
   } finally { clearTimeout(timer); }
   if (!response.ok) {
-    if (response.status === 401 && path !== '/api/join') showJoin(body.error);
+    if (response.status === 401 && path !== '/api/join' && generation === state.generation) showJoin(body.error);
     const error = new Error(body.error || `Request failed (${response.status})`);
     error.status = response.status;
     throw error;

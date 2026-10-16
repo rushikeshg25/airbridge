@@ -4,6 +4,7 @@ import { $, api, bytes, events, recall, remember, showJoin, showView, state, toa
 
 async function connect() {
   const room = await api('/api/room');
+  state.generation++;
   state.room = room;
   $('room-name').textContent = room.name;
   $('device-name').textContent = room.device;
@@ -35,8 +36,13 @@ $('join-form').addEventListener('submit', async (event) => {
   } finally { button.disabled = false; }
 });
 $('leave-button').addEventListener('click', async () => {
+  $('leave-button').disabled = true;
+  state.generation++;
+  state.room = null;
   events.dispatchEvent(new Event('leaving'));
-  try { await api('/api/leave', { method: 'POST' }); showJoin(); } catch (error) { toast(error.message); }
+  try { await api('/api/leave', { method: 'POST' }); showJoin(); }
+  catch (error) { showJoin(error.message); }
+  finally { $('leave-button').disabled = false; }
 });
 for (const button of document.querySelectorAll('[data-view]')) button.addEventListener('click', () => showView(button.dataset.view));
 $('copy-link').addEventListener('click', async () => {
