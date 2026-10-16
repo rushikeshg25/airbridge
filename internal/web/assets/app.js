@@ -1,3 +1,4 @@
+import './transfers.js';
 import { $, api, bytes, events, recall, remember, showJoin, showView, state, toast } from './common.js';
 
 async function connect() {
