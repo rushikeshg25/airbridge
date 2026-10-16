@@ -24,3 +24,12 @@ func (s *Server) uploadChunk(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Upload-Offset", strconv.FormatInt(f.Offset, 10))
 	reply(w, 200, f)
 }
+
+func (s *Server) finishUpload(w http.ResponseWriter, r *http.Request) {
+	f, err := s.files.Finish(r.PathValue("id"))
+	if err != nil {
+		storageError(w, err)
+		return
+	}
+	reply(w, 200, f)
+}
