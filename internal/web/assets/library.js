@@ -69,12 +69,14 @@ export async function refresh() {
     $('storage-label').textContent = `${bytes(result.used)} / ${bytes(result.quota)}`;
     $('storage-progress').value = result.quota ? result.used / result.quota * 100 : 0;
     state.online = true;
+    $('connection').classList.remove('offline');
     $('offline-banner').hidden = true;
     $('connection-label').textContent = 'Connected to room';
     render();
   } catch (error) {
     if (error.status !== 401) {
       state.online = false;
+      $('connection').classList.add('offline');
       $('offline-banner').hidden = false;
       $('connection-label').textContent = 'Host unreachable';
     }

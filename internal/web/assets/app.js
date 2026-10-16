@@ -11,7 +11,7 @@ async function connect() {
   $('connection-label').textContent = 'Connected to room';
   $('file-limit').textContent = `Any file type · Up to ${bytes(room.maxFile)} per file`;
   const urls = room.urls.filter((url) => !url.includes('localhost') && !url.includes('127.0.0.1'));
-  $('room-url').value = urls[0] || location.origin;
+  $('room-url').value = !['localhost', '127.0.0.1', '[::1]'].includes(location.hostname) ? location.origin : urls[0] || location.origin;
   $('join-dialog').close();
   $('offline-banner').hidden = true;
   events.dispatchEvent(new Event('connected'));
@@ -51,3 +51,20 @@ $('copy-link').addEventListener('click', async () => {
   } catch { $('room-url').select(); toast('Select and copy the room address above.'); }
 });
 connect().catch((error) => showJoin(error.status === 401 ? '' : 'Cannot reach the host. Check your connection and try again.'));
+
+$('details-button').setAttribute('aria-expanded', 'false');
+$('details-button').addEventListener('click', () => {
+  const details = $('connection-details');
+  details.hidden = !details.hidden;
+  $('details-button').setAttribute('aria-expanded', String(!details.hidden));
+  if (details.hidden || !state.room) return;
+  details.replaceChildren();
+  const hint = document.createElement('p');
+  hint.textContent = 'Use an address on the same network as your receiving device. Guest Wi-Fi may block connections.';
+  details.append(hint);
+  for (const url of state.room.urls) {
+    const address = document.createElement('code');
+    address.textContent = url;
+    details.append(address);
+  }
+});

@@ -51,7 +51,7 @@ function draw(item) {
   item.ui.card.dataset.status = item.status;
   item.ui.icon.textContent = item.status === 'done' ? '✓' : '↗';
   item.ui.progress.value = item.status === 'done' ? item.file.size || 1 : item.visible || 0;
-  item.ui.info.textContent = item.error || `${labels[item.status]} · ${bytes(item.visible || 0)} / ${bytes(item.file.size)}${item.speed ? ` · ${bytes(item.speed)}/s` : ''}`;
+  item.ui.info.textContent = item.error || `${labels[item.status]} · ${bytes(item.visible || 0)} / ${bytes(item.file.size)}${item.speed && item.status === 'sending' ? ` · ${bytes(item.speed)}/s · ~${Math.max(1, Math.ceil((item.file.size - (item.visible || 0)) / item.speed))}s left` : ''}`;
   item.ui.retry.hidden = item.status !== 'error';
   item.ui.pauseButton.hidden = !['sending', 'queued'].includes(item.status);
   item.ui.pauseButton.disabled = Boolean(item.paused);
@@ -161,7 +161,7 @@ async function enqueue(files) {
     const key = JSON.stringify([file.name, file.size, file.lastModified, identity.hash]);
     if (queue.some((item) => item.key === key && item.status !== 'done')) { toast(`${file.name} is already in your queue.`); continue; }
     const item = { file, key, id: saved[key] || null, status: 'queued', visible: 0, speed: 0, paused: false };
-    queue.push(item); draw(item);
+    queue.push(item); draw(item); pump();
   }
   pump();
 }

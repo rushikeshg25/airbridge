@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"sort"
+	"strings"
 )
 
 type Config struct {
@@ -25,13 +26,28 @@ func URLs(address string) []string {
 		return []string{"http://" + net.JoinHostPort(host, port)}
 	}
 	urls := []string{"http://localhost:" + port}
-	addresses, _ := net.InterfaceAddrs()
-	for _, address := range addresses {
-		network, ok := address.(*net.IPNet)
-		if !ok || network.IP.IsLoopback() || network.IP.To4() == nil {
+	interfaces, _ := net.Interfaces()
+	for _, iface := range interfaces {
+		if iface.Flags&net.FlagUp == 0 || iface.Flags&net.FlagLoopback != 0 {
 			continue
 		}
-		urls = append(urls, fmt.Sprintf("http://%s", net.JoinHostPort(network.IP.String(), port)))
+		virtual := false
+		for _, prefix := range []string{"docker", "br-", "veth", "virbr", "tailscale", "tun", "wg"} {
+			if strings.HasPrefix(iface.Name, prefix) {
+				virtual = true
+			}
+		}
+		if virtual {
+			continue
+		}
+		addresses, _ := iface.Addrs()
+		for _, address := range addresses {
+			network, ok := address.(*net.IPNet)
+			if !ok || network.IP.To4() == nil || network.IP.IsLoopback() || !network.IP.IsPrivate() {
+				continue
+			}
+			urls = append(urls, fmt.Sprintf("http://%s", net.JoinHostPort(network.IP.String(), port)))
+		}
 	}
 	sort.Strings(urls)
 	return urls
