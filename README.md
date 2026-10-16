@@ -8,29 +8,100 @@ One Mac or Linux computer hosts the room. Devices join using its local address a
 
 ## Start sharing
 
-Download the archive for your host from [GitHub Releases](https://github.com/rushikeshg25/airbridge/releases/latest). Choose `macos-arm64` for Apple Silicon, `macos-amd64` for Intel Macs, or the matching Linux architecture. Extract it and run `./airbridge`. Phones and other clients need only a browser.
+### Before you start
 
-Verify the download against the release’s `SHA256SUMS` using `sha256sum` on Linux or `shasum -a 256` on macOS. macOS binaries are unsigned and not notarized; you can build from source if your system blocks an unrecognized application.
+- Choose a macOS or Linux computer to host the room. Keep it awake while sharing.
+- Connect the host and receiving devices to the same trusted Wi-Fi or Ethernet network.
+- Make sure the host has enough free disk space to store the uploaded files. The configured quota does not reserve physical disk space.
+- Use a modern browser on each device. Phones, tablets, and receiving computers do not need to install Airbridge.
 
-To build from source, install Go 1.23 or later, then run from this repository:
+Choose one of the two startup options below. Use a release download to run Airbridge without development tools, or build from source to work on the project.
 
-```sh
-make run
-```
+### Option 1: Run a release download
 
-Or without Make:
+1. Download your host's `.tar.gz` archive and `SHA256SUMS` from [GitHub Releases](https://github.com/rushikeshg25/airbridge/releases/latest).
 
-```sh
-go build -o bin/airbridge ./cmd/airbridge
-./bin/airbridge
-```
+   Choose `macos-arm64` for Apple Silicon or `macos-amd64` for an Intel Mac. On Linux, choose `linux-amd64` for x86-64 or `linux-arm64` for ARM64. Run `uname -m` if you need to check the host architecture.
 
-1. The terminal prints the host’s local addresses and a random room code.
-2. Open `http://localhost:8080` on the host. On another device, open the printed LAN address, for example `http://192.168.1.13:8080`.
-3. Enter a device name and the room code in the UI.
-4. Choose or drop files. Once they finish uploading, open **Room files** on the receiving device and select **Download**.
+2. Open a terminal in the download directory. Set the archive name to the file you downloaded. Replace `X.Y.Z` and the platform in this example:
 
-Keep the host awake and the sender’s browser open. Android, iPhone/iPad, Windows, macOS, and Linux devices use a modern browser; hosting currently supports macOS and Linux. Physical-device testing is still needed; see [verification](docs/verification.md).
+   ```sh
+   cd ~/Downloads
+   AIRBRIDGE_ARCHIVE="airbridge_X.Y.Z_macos-arm64.tar.gz"
+   ```
+
+3. Calculate the archive's checksum with the command for your host. Compare the result with the line for that exact filename in `SHA256SUMS`. Continue only if the hashes match.
+
+   ```sh
+   # macOS
+   shasum -a 256 "$AIRBRIDGE_ARCHIVE"
+
+   # Linux
+   sha256sum "$AIRBRIDGE_ARCHIVE"
+   ```
+
+4. Extract the archive into a dedicated directory and start the host:
+
+   ```sh
+   mkdir -p airbridge
+   tar -xzf "$AIRBRIDGE_ARCHIVE" -C airbridge
+   cd airbridge
+   ./airbridge
+   ```
+
+   macOS binaries are unsigned and not notarized. If macOS blocks the downloaded app, use the source build below.
+
+### Option 2: Build and run from source
+
+Install [Go 1.23 or later](https://go.dev/doc/install) and Git on the macOS or Linux host. Make is optional. Node.js and Python are not required to build or run the app.
+
+1. Clone the repository and enter its directory. If you already have a checkout, open a terminal in that directory instead.
+
+   ```sh
+   git clone https://github.com/rushikeshg25/airbridge.git
+   cd airbridge
+   ```
+
+2. Check that Go is available:
+
+   ```sh
+   go version
+   ```
+
+3. Build and start Airbridge:
+
+   ```sh
+   go build -o bin/airbridge ./cmd/airbridge
+   ./bin/airbridge
+   ```
+
+   If Make is installed, `make run` builds and starts the same app in one step. There is no separate frontend server or dependency installation step.
+
+### Join the room and transfer a file
+
+1. Leave the host terminal open. Startup prints the room's addresses, code, and storage directory. For example, your output will look similar to this, with a different address and code:
+
+   ```text
+   Airbridge • My Airbridge
+   Open http://192.168.1.13:8080
+   Open http://localhost:8080
+   Room code: 123456
+   Files: ./data
+   Keep this computer awake while transferring.
+   ```
+
+2. Open `http://localhost:8080` in the host's browser. On another device, open the printed local network (LAN) address, such as `http://192.168.1.13:8080`. Use the address from your terminal; `localhost` always refers to the device running the browser.
+3. Enter a device name and the room code on each device, then select **Join the room**.
+4. On the sending device, choose or drop a file in **Send files**. Keep that browser open until the upload finishes.
+5. On the receiving device, open **Room files** and select **Download** for the completed file.
+
+The host stores uploaded files in `./data` by default. Browser downloads go to the receiving device's download location. Android, iPhone/iPad, Windows, macOS, and Linux devices can join through a modern browser. Physical-device testing is still needed; see [verification](docs/verification.md).
+
+### Stop and restart
+
+Press **Ctrl+C** in the host terminal to stop Airbridge. Shutdown can take up to 15 seconds while active requests finish.
+
+To restart, run `./airbridge` from the extracted release directory, or `./bin/airbridge` from the repository root. Use the same working directory and `-data` option to reopen the same files and incomplete uploads. Each restart ends existing sessions and generates a new room code unless you set `AIRBRIDGE_PIN`. Join again with the code shown in the terminal.
 
 ## What it includes
 
@@ -46,6 +117,8 @@ Uploads go **sender → host disk**, then downloads go **host disk → receiver*
 
 ## Host options
 
+Run these examples from a source checkout after building. For a release download, replace `./bin/airbridge` with `./airbridge`. To change options on a running host, stop it first, then start it with the new command.
+
 ```sh
 ./bin/airbridge -listen :8080 -data ./data -name "Studio room"
 ./bin/airbridge -max-file 107374182400 -quota 536870912000
@@ -60,6 +133,8 @@ Uploads go **sender → host disk**, then downloads go **host disk → receiver*
 | `-max-file` | `53687091200` | Per-file limit in bytes: 50 GiB. |
 | `-quota` | `107374182400` | Total reserved bytes: 100 GiB, including incomplete uploads. |
 
+Both limits must be positive, and `-quota` must be at least `-max-file`. Run `./bin/airbridge -help` to list options, or `./bin/airbridge -version` to print build information.
+
 A fresh room code is generated on startup. Set `AIRBRIDGE_PIN` in the host environment for a stable code (at least six characters). Do not put the code in URLs or source control. Sessions last 24 hours and end when the host restarts. Files and incomplete uploads remain until explicitly removed.
 
 **Trusted LAN only:** the default HTTP transport is not encrypted. The code controls access; it does not protect traffic from network observers. Every joined member can download or remove every room file. Do not expose the port to the internet. Use a trusted network or a separately configured encrypted tunnel when necessary.
@@ -72,9 +147,21 @@ Pause before switching networks. Mobile operating systems can suspend background
 
 The quota reserves the whole declared size. Actual free disk space can be lower; disk errors stop the upload and appear in the UI. Remove unused files through Room files. Do not manually edit the host’s `.part`, `.blob`, or `.json` files. Back up the data directory while the host is stopped if you need to preserve the room.
 
+## Troubleshooting startup and connections
+
+- **`go: command not found`:** install Go, open a new terminal, and confirm that `go version` works. A release download does not need Go.
+- **`make: command not found`:** use the `go build` and `./bin/airbridge` commands in the source instructions.
+- **`address already in use`:** stop the process using port 8080, or start Airbridge with `./bin/airbridge -listen :8081`. Use the new port in every device's URL. For a release download, use `./airbridge -listen :8081`.
+- **The data directory is already in use:** stop the other Airbridge host using that directory. To run a separate room, choose both a different port and a different `-data` directory. Do not delete the lock file.
+- **Another device cannot open the page:** use the host's LAN address, including `http://` and the port. Confirm both devices are on the same network; a phone using mobile data cannot reach the private LAN address. Check guest Wi-Fi isolation, VPN routes, and the host firewall. A host started with `-listen 127.0.0.1:8080` only accepts connections from that computer.
+- **The room code no longer works:** check the current host terminal. Restarting the host changes the code unless `AIRBRIDGE_PIN` is set, and all devices must join again.
+- **Files appear to be missing after a restart:** check the printed `Files:` directory. The default `./data` path is relative to the directory where you started Airbridge. Restart from the original directory or pass its absolute path with `-data`.
+
 ## Development and verification
 
 The runtime uses only Go’s standard library and native browser APIs. UI files are embedded in the binary; **rebuild and restart after editing them**.
+
+Run development commands from the repository root. In addition to Go and Make, install Node.js 20+ for JavaScript checks and browser QA. Packaging and benchmarks require Python 3. Go race tests require a working C compiler and CGO support.
 
 ```sh
 make check                         # race tests, go vet, JavaScript syntax
