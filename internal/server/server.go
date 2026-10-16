@@ -49,6 +49,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/files", s.require(s.listFiles))
 	mux.HandleFunc("POST /api/files", s.require(s.createFile))
 	mux.HandleFunc("GET /api/files/{id}", s.require(s.getFile))
+	mux.HandleFunc("PATCH /api/files/{id}", s.require(s.uploadChunk))
 	mux.Handle("/", web.Handler())
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("X-Content-Type-Options", "nosniff")
