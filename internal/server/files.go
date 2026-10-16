@@ -53,3 +53,11 @@ func (s *Server) getFile(w http.ResponseWriter, r *http.Request) {
 	}
 	reply(w, 200, f)
 }
+
+func (s *Server) deleteFile(w http.ResponseWriter, r *http.Request) {
+	if err := s.files.Delete(r.PathValue("id")); err != nil {
+		storageError(w, err)
+		return
+	}
+	reply(w, 200, map[string]bool{"ok": true})
+}

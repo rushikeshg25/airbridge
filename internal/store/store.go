@@ -53,6 +53,9 @@ func Open(dir string, max, quota int64) (*Store, error) {
 		return nil, err
 	}
 	s := &Store{dir: dir, max: max, quota: quota, files: make(map[string]*entry)}
+	if err := s.recoverDeletes(); err != nil {
+		return nil, err
+	}
 	paths, err := filepath.Glob(filepath.Join(dir, "*.json"))
 	if err != nil {
 		return nil, err
