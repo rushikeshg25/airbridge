@@ -1,3 +1,4 @@
+import './library.js';
 import './transfers.js';
 import { $, api, bytes, events, recall, remember, showJoin, showView, state, toast } from './common.js';
 

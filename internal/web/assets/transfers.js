@@ -184,3 +184,14 @@ events.addEventListener('leaving', () => { for (const item of queue) if (['sendi
 window.addEventListener('beforeunload', (event) => {
   if (queue.some((item) => item.status === 'sending' || item.status === 'queued')) { event.preventDefault(); event.returnValue = ''; }
 });
+
+events.addEventListener('file-deleted', (event) => {
+  for (const item of queue) if (item.id === event.detail) {
+    pause(item);
+    delete saved[item.key]; remember('uploads', saved);
+    item.id = null;
+    item.error = 'Removed from the room. Resume to send a new copy.';
+    if (item.status === 'done') item.status = 'paused';
+    draw(item);
+  }
+});
