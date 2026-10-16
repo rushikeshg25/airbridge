@@ -200,3 +200,5 @@ func (s *Server) room(w http.ResponseWriter, r *http.Request) {
 	s.mu.Unlock()
 	reply(w, 200, map[string]any{"name": s.cfg.Name, "device": sess.Name, "urls": URLs(s.cfg.Address), "maxFile": s.cfg.MaxFile, "quota": s.cfg.Quota, "chunkSize": 8 << 20})
 }
+
+func (s *Server) Close() error { return s.files.Close() }

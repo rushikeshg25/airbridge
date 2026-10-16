@@ -39,6 +39,7 @@ type entry struct {
 	deleted bool
 }
 type Store struct {
+	lock             *os.File
 	mu               sync.RWMutex
 	dir              string
 	max, quota, used int64
@@ -52,7 +53,17 @@ func Open(dir string, max, quota int64) (*Store, error) {
 	if err := os.MkdirAll(dir, 0700); err != nil {
 		return nil, err
 	}
-	s := &Store{dir: dir, max: max, quota: quota, files: make(map[string]*entry)}
+	lock, err := lockDirectory(dir)
+	if err != nil {
+		return nil, err
+	}
+	ready := false
+	defer func() {
+		if !ready {
+			_ = lock.Close()
+		}
+	}()
+	s := &Store{lock: lock, dir: dir, max: max, quota: quota, files: make(map[string]*entry)}
 	if err := s.recoverDeletes(); err != nil {
 		return nil, err
 	}
@@ -90,6 +101,7 @@ func Open(dir string, max, quota int64) (*Store, error) {
 		s.files[id] = &entry{File: f}
 		s.used += f.Size
 	}
+	ready = true
 	return s, nil
 }
 func validID(id string) bool {
@@ -187,3 +199,5 @@ func (s *Store) List() ([]File, int64) {
 	sort.Slice(files, func(i, j int) bool { return files[i].Created.After(files[j].Created) })
 	return files, s.used
 }
+
+func (s *Store) Close() error { return s.lock.Close() }

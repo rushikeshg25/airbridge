@@ -20,10 +20,12 @@ func TestResumePublishAndDownload(t *testing.T) {
 	if _, err = s.Append(f.ID, 0, 6, bytes.NewBufferString("hello ")); err != nil {
 		t.Fatal(err)
 	}
+	_ = s.Close()
 	s, err = Open(dir, 100, 200)
 	if err != nil {
 		t.Fatal(err)
 	}
+	t.Cleanup(func() { _ = s.Close() })
 	f, _ = s.Get(f.ID)
 	if f.Offset != 6 {
 		t.Fatalf("offset %d", f.Offset)
@@ -52,6 +54,7 @@ func TestResumePublishAndDownload(t *testing.T) {
 }
 func TestInvalidQuotaAndDelete(t *testing.T) {
 	s, _ := Open(t.TempDir(), 100, 100)
+	t.Cleanup(func() { _ = s.Close() })
 	for _, name := range []string{"../secret", "..", "a/b", "a\\b", "bad\nname", ""} {
 		if _, err := s.Create(name, 1, "device"); !errors.Is(err, ErrInvalid) {
 			t.Errorf("accepted %q", name)
@@ -70,6 +73,7 @@ func TestInvalidQuotaAndDelete(t *testing.T) {
 }
 func TestInterruptedAndStaleChunks(t *testing.T) {
 	s, _ := Open(t.TempDir(), 100, 200)
+	t.Cleanup(func() { _ = s.Close() })
 	f, _ := s.Create("file", 10, "device")
 	if _, err := s.Append(f.ID, 0, 5, bytes.NewBufferString("ab")); err == nil {
 		t.Fatal("short write accepted")
@@ -83,5 +87,48 @@ func TestInterruptedAndStaleChunks(t *testing.T) {
 	}
 	if _, err := s.Append(f.ID, 0, 5, bytes.NewBufferString("again")); !errors.Is(err, ErrConflict) {
 		t.Fatal("stale offset accepted")
+	}
+}
+
+func TestExclusiveDirectoryLock(t *testing.T) {
+	dir := t.TempDir()
+	first, err := Open(dir, 100, 100)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if other, err := Open(dir, 100, 100); err == nil {
+		other.Close()
+		t.Fatal("second writer accepted")
+	}
+	first.Close()
+	second, err := Open(dir, 100, 100)
+	if err != nil {
+		t.Fatal("lock not released", err)
+	}
+	second.Close()
+}
+func TestZeroByteAndConcurrentOffset(t *testing.T) {
+	s, _ := Open(t.TempDir(), 100, 200)
+	defer s.Close()
+	empty, _ := s.Create("empty", 0, "device")
+	if _, err := s.Finish(empty.ID); err != nil {
+		t.Fatal(err)
+	}
+	f, _ := s.Create("race", 4, "device")
+	results := make(chan error, 2)
+	for i := 0; i < 2; i++ {
+		go func() { _, err := s.Append(f.ID, 0, 4, bytes.NewBufferString("data")); results <- err }()
+	}
+	wins := 0
+	for i := 0; i < 2; i++ {
+		err := <-results
+		if err == nil {
+			wins++
+		} else if !errors.Is(err, ErrConflict) {
+			t.Fatal(err)
+		}
+	}
+	if wins != 1 {
+		t.Fatalf("expected one writer, got %d", wins)
 	}
 }
