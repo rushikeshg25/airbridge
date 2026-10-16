@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"airbridge/internal/server"
-	"airbridge/internal/web"
 )
 
 func main() {
@@ -40,7 +39,11 @@ func main() {
 	if len(cfg.PIN) < 6 {
 		log.Fatal("AIRBRIDGE_PIN must contain at least 6 characters")
 	}
-	srv := &http.Server{Addr: cfg.Address, Handler: web.Handler(), ReadHeaderTimeout: 10 * time.Second, IdleTimeout: 90 * time.Second, MaxHeaderBytes: 16 << 10}
+	app, err := server.New(cfg)
+	if err != nil {
+		log.Fatal(err)
+	}
+	srv := &http.Server{Addr: cfg.Address, Handler: app.Handler(), ReadHeaderTimeout: 10 * time.Second, IdleTimeout: 90 * time.Second, MaxHeaderBytes: 16 << 10}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	go func() {
