@@ -4,6 +4,8 @@
 
 One Mac or Linux computer hosts the room. Devices join using its local address and room code. Files stay on that host: no cloud service, account, external assets, or frontend build is required.
 
+![Airbridge desktop workspace](docs/images/desktop.png)
+
 ## Start sharing
 
 Install Go 1.23 or later, then run from this repository:
