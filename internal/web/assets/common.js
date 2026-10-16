@@ -21,6 +21,7 @@ export function toast(message) {
   toastTimer = setTimeout(() => { $('toast').hidden = true; }, 4500);
 }
 export function showJoin(message = '') {
+  events.dispatchEvent(new Event('leaving'));
   state.room = null;
   $('join-error').textContent = message;
   $('connection-label').textContent = 'Not connected';
@@ -28,11 +29,21 @@ export function showJoin(message = '') {
   if (!$('join-dialog').open) $('join-dialog').showModal();
 }
 export async function api(path, options = {}) {
-  const response = await fetch(path, {
-    ...options,
-    headers: { 'Content-Type': 'application/json', ...options.headers },
-  });
-  const body = await response.json();
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), path.endsWith('/complete') ? 120000 : 30000);
+  let response, body;
+  try {
+    response = await fetch(path, {
+      ...options,
+      signal: controller.signal,
+      headers: { 'Content-Type': 'application/json', ...options.headers },
+    });
+    body = await response.json();
+  } catch (error) {
+    throw new Error(error.name === 'AbortError'
+      ? 'The host took too long to respond. Check the connection and retry.'
+      : 'Cannot reach the host. Check your network and retry.');
+  } finally { clearTimeout(timer); }
   if (!response.ok) {
     if (response.status === 401 && path !== '/api/join') showJoin(body.error);
     const error = new Error(body.error || `Request failed (${response.status})`);

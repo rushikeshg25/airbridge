@@ -132,9 +132,13 @@ async function run(item) {
     item.speed = 0;
     item.visible = item.file.size;
     events.dispatchEvent(new Event('files-changed'));
+    $('transfer-announcement').textContent = `${item.file.name} is ready in Room files.`;
   } catch (error) {
     item.status = item.paused ? 'paused' : 'error';
     item.error = item.paused ? '' : error.message;
+    if (item.paused && item.id && state.room) {
+      try { item.visible = (await api(`/api/files/${item.id}`)).offset; } catch { /* Resume will reconcile the acknowledged offset. */ }
+    }
   } finally {
     item.running = false; item.speed = 0; active--; draw(item); pump();
   }
